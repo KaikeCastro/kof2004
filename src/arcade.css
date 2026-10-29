@@ -9,3 +9,15 @@ body{background:radial-gradient(ellipse at 50% 38%,#191539 0,#090815 65%);font-f
 .pick-player{position:absolute;z-index:3;left:7px;top:8px;background:#071341b0;border:1px solid #9bace0;color:#e0e6ff;font-family:Pixel;font-size:15px;padding:7px 6px;text-shadow:2px 2px #16172a}.pick-player.active{color:#ffe859;border-color:#ffe859;background:#0c1b53}.pick-player:hover{background:#223d87}.pick-player.rival-heading{-webkit-text-stroke:0;font-size:15px;text-align:left}.rival-heading small{font-size:5px;margin-top:7px}.portrait-bg .pick-player{opacity:.9}.rival-preview canvas{inset:0}.rival-preview strong{z-index:3}
 @media(max-width:760px){.pick-player,.pick-player.rival-heading{font-size:10px;left:4px;top:5px;padding:5px}.rival-heading small{font-size:3px;line-height:2;margin-top:5px}}
 .lan-panel{margin:8px 0}.lan-panel button{width:100%;font-size:7px}.lan-panel p{font:7px/1.8 Pixel,monospace;color:#fff5a2;overflow-wrap:anywhere}.lan-panel p:empty{display:none}
+/* Ambos os jogadores escolhem no mesmo painel, com retratos lado a lado. */
+.selection-layout{grid-template-columns:1fr;gap:15px}
+.fighter-detail{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:190px auto;gap:0 14px;padding:0}
+.portrait-bg{height:190px;grid-column:1;grid-row:1}.detail-body{grid-column:1;grid-row:2}
+.detail-body h2{margin:5px 0 0}.rival-preview{grid-column:2;grid-row:1 / 3;min-height:0;max-height:none}
+.rival-preview canvas{height:190px}.rival-preview strong{height:34px}
+.roster-panel{padding:0}.roster{grid-template-columns:repeat(8,1fr)}.fighter-card{height:135px}
+.opponent-marker{display:none;position:absolute;top:7px;right:5px;z-index:3;background:#fa94bd;color:#2b1231;font:7px Pixel;padding:3px}
+.cpu-selected .opponent-marker{display:block}.fighter-card.selected.cpu-selected .opponent-marker{top:27px}
+.panel-heading h3{font-size:8px}.selection-hint{font-size:6px}
+@media(max-width:760px){.fighter-detail{grid-template-columns:1fr 1fr;grid-template-rows:138px auto;gap:0 8px;min-height:0}.portrait-bg{height:138px}.rival-preview{height:168px}.rival-preview canvas{height:138px}.rival-preview strong{height:27px}.detail-body h2{margin:4px 0 0}.roster{grid-template-columns:repeat(4,1fr)}.fighter-card{height:115px}.opponent-marker{font-size:5px;top:3px;right:2px;padding:2px}.fighter-card.selected.cpu-selected .opponent-marker{top:18px}.selection-hint{font-size:5px}}
+#portrait,.rival-preview canvas{object-fit:contain;background:#14245f}

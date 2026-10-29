@@ -11,6 +11,7 @@ const keys=new Set(),pressed=new Set(),portraits=[];
 let lanRoom=null,lanInput={},lanPrevious={},lanConnected=false,lanPollBusy=false,lanFrameBusy=false;
 const settingsKey='brasil-fighters-settings-v1';
 try{const s=JSON.parse(localStorage.getItem(settingsKey)||'{}');selected=clamp(Number(s.selected)||0,0,7);if(['easy','normal','hard'].includes(s.difficulty))$('difficulty').value=s.difficulty;if(['rio','brasilia','salvador','saopaulo'].includes(s.arena))$('arena-select').value=s.arena;}catch{}
+opponentChoice=(selected+3)%fighters.length;
 function persist(){try{localStorage.setItem(settingsKey,JSON.stringify({selected,difficulty:$('difficulty').value,arena:$('arena-select').value}));}catch{}}
 
 function sound(freq=180,duration=.08,type='square',volume=.04,slide=0){if(muted)return;try{audio??=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,audio.currentTime);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(20,freq+slide),audio.currentTime+duration);g.gain.setValueAtTime(volume,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+duration);}catch{}}
@@ -28,7 +29,7 @@ function renderPortrait(){pc.clearRect(0,0,600,630);if(drawPixelPortrait(pc,sele
 function renderRival(){const i=opponentChoice??(selected+3)%8;const c=$('rival-portrait').getContext('2d');c.clearRect(0,0,600,630);drawPixelPortrait(c,i,600,630);$('rival-name').textContent=fighters[i].name.toUpperCase();document.querySelectorAll('.fighter-card').forEach((el,n)=>el.classList.toggle('cpu-selected',n===i));}
 async function load(){
   try{await loadPixelArt();}catch(e){$('load-status').textContent='Modo de arte local';console.error(e);}
-  for(let i=0;i<fighters.length;i++){const d=fighters[i];portraits[i]=pixelPortraitURL(i);const b=document.createElement('button');b.className='fighter-card';b.setAttribute('aria-label',`${d.name}, ${d.style}`);b.innerHTML=`<img src="${portraits[i]}" alt="${d.name}" draggable="false"><span class="card-number">${String(i+1).padStart(2,'0')}</span><span class="selected-marker">1P</span><span class="card-copy"><b>${d.name.toUpperCase()}</b><small>${d.style.toUpperCase()}</small></span>`;b.addEventListener('click',()=>choose(i));$('roster').append(b);$('load-progress').style.width=`${(i+1)/8*100}%`;$('load-status').textContent=`${d.name} na arena · ${i+1}/8`;await new Promise(r=>setTimeout(r,45));}
+  for(let i=0;i<fighters.length;i++){const d=fighters[i];portraits[i]=pixelPortraitURL(i);const b=document.createElement('button');b.className='fighter-card';b.setAttribute('aria-label',`${d.name}, ${d.style}`);b.innerHTML=`<img src="${portraits[i]}" alt="${d.name}" draggable="false"><span class="card-number">${String(i+1).padStart(2,'0')}</span><span class="selected-marker">1P</span><span class="opponent-marker">2P</span><span class="card-copy"><b>${d.name.toUpperCase()}</b><small>${d.style.toUpperCase()}</small></span>`;b.addEventListener('click',()=>choose(i));$('roster').append(b);$('load-progress').style.width=`${(i+1)/8*100}%`;$('load-status').textContent=`${d.name} na arena · ${i+1}/8`;await new Promise(r=>setTimeout(r,45));}
   select(selected,false);$('load-status').textContent='Tudo pronto. O Brasil entrou na arena.';await new Promise(r=>setTimeout(r,180));$('loading').classList.add('done');setTimeout(()=>$('loading').hidden=true,450);
 }
 
@@ -72,7 +73,8 @@ window.addEventListener('keydown',e=>{
   if(k==='escape'&&!e.repeat){if(!$('help-overlay').hidden)closeHelp();else setPaused(!paused);return;}
   if(!$('help-overlay').hidden)return;
   if(screen==='selection'){
-    if(['arrowleft','arrowright','arrowup','arrowdown'].includes(k)){e.preventDefault();choose((pickingOpponent?(opponentChoice??(selected+3)%8):selected)+({arrowleft:-1,arrowright:1,arrowup:-4,arrowdown:4}[k]));}
+    if(['a','d','w','s'].includes(k)){e.preventDefault();$('pick-p1').click();select(selected+({a:-1,d:1,w:-4,s:4}[k]));}
+    if(['arrowleft','arrowright','arrowup','arrowdown'].includes(k)){e.preventDefault();$('pick-p2').click();choose((opponentChoice??(selected+3)%8)+({arrowleft:-1,arrowright:1,arrowup:-4,arrowdown:4}[k]));}
     if(k==='enter'&&!e.repeat&&!e.target.matches('button,a')){e.preventDefault();startMatch();}return;
   }
   if(controlCodes[e.code]){e.preventDefault();if(!keys.has(k))pressed.add(k);keys.add(k);}

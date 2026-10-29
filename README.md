@@ -15,7 +15,7 @@ O servidor usa a porta 3000 (sobrescreva com `PORT`). Abra a aplicação no nave
 
 ## Jogar
 
-Selecione um personagem, dificuldade e cenário, e clique em **Vamos pra luta**. Vença dois rounds de 60 segundos. O modo padrão é contra a CPU. O botão **1P VS CPU** alterna para dois jogadores no mesmo teclado; clique em **P.2** no retrato inferior para escolher o adversário; **P.1** volta à escolha do seu lutador.
+Selecione um personagem, dificuldade e cenário, e clique em **Vamos pra luta**. Vença dois rounds de 60 segundos. O modo padrão é contra a CPU. O botão **1P VS CPU** alterna para dois jogadores no mesmo teclado; Na seleção, use A/D para o jogador 1 e as setas para o jogador 2; também é possível clicar em **1P** ou **2P** e depois em um retrato.
 
 | Ação | Jogador 1 | Jogador 2 |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ npm run check
 npm test
 ```
 
-O jogo usa Canvas 2D, HTML e CSS. Fontes são locais e têm fallback e o jogo funciona sem serviços externos, contas ou chaves. É um protótipo em pixel art, com sprites e retratos próprios gerados para estes personagens, quatro poses-base e quatro quadros de caminhada por lutador e IA simples. Não reproduz integralmente KOF 2002: não inclui times de três, o conjunto completo de animações ou multiplayer online.
+O jogo usa Canvas 2D, HTML e CSS. Fontes são locais e têm fallback e o jogo funciona sem serviços externos, contas ou chaves. É um protótipo em pixel art, com sprites e retratos próprios gerados para estes personagens, poses de preparação, caminhada, joelhada, rasteira, salto, soco e chute por lutador e IA simples. Não reproduz integralmente KOF 2002: não inclui times de três, o conjunto completo de animações ou multiplayer online.
 
 ## Dois jogadores no Wi-Fi local (experimental)
 

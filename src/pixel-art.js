@@ -1,12 +1,13 @@
 // Original generated game assets. A chroma-keyed atlas keeps the game dependency-free.
-const portraitAtlas=new Image(), fighterAtlas=new Image(), walkAtlas=new Image();
+const portraitAtlas=new Image(), fighterAtlas=new Image(), walkAtlas=new Image(), choreographyAtlas=new Image();
 const rioStage=new Image(),brasiliaStage=new Image(),novasFases=new Image();
-let keyed,walkKeyed,ready=false;
+let keyed,walkKeyed,choreographyKeyed,ready=false;
+const choreographyFrames=[];
 const walkFrames=[];
 const frames=[];
 function imageReady(img,url){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error(`Falha ao carregar ${url}`));img.src=url;});}
 export async function loadPixelArt(){
-  await Promise.all([imageReady(portraitAtlas,'/assets/art/portraits-sheet.png'),imageReady(fighterAtlas,'/assets/art/fighters-sheet.png'),imageReady(walkAtlas,'/assets/art/caminhada.png'),imageReady(rioStage,'/assets/art/rio-stage.png'),imageReady(brasiliaStage,'/assets/art/brasilia-stage.png'),imageReady(novasFases,'/assets/art/novas-fases.png')]);
+  await Promise.all([imageReady(portraitAtlas,'/assets/art/portraits-sheet.png'),imageReady(fighterAtlas,'/assets/art/fighters-sheet.png'),imageReady(walkAtlas,'/assets/art/caminhada.png'),imageReady(choreographyAtlas,'/assets/art/coreografia.png'),imageReady(rioStage,'/assets/art/rio-stage.png'),imageReady(brasiliaStage,'/assets/art/brasilia-stage.png'),imageReady(novasFases,'/assets/art/novas-fases.png')]);
   keyed=document.createElement('canvas');keyed.width=fighterAtlas.width;keyed.height=fighterAtlas.height;
   const c=keyed.getContext('2d',{willReadFrequently:true});c.drawImage(fighterAtlas,0,0);const pixels=c.getImageData(0,0,keyed.width,keyed.height);
   for(let p=0;p<pixels.data.length;p+=4){const r=pixels.data[p],g=pixels.data[p+1],b=pixels.data[p+2];if(r>145&&b>135&&g<115&&r>g*1.65&&b>g*1.6)pixels.data[p+3]=0;}
@@ -33,6 +34,16 @@ export async function loadPixelArt(){
     for(let y=walkRows[row][0];y<walkRows[row][1];y++)for(let x=left;x<right;x++){if(wp.data[(y*walkKeyed.width+x)*4+3]>100){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}}
     walkFrames[row][i]={x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
   }}
+  choreographyKeyed=document.createElement('canvas');choreographyKeyed.width=choreographyAtlas.width;choreographyKeyed.height=choreographyAtlas.height;
+  const cc=choreographyKeyed.getContext('2d',{willReadFrequently:true});cc.drawImage(choreographyAtlas,0,0);const cp=cc.getImageData(0,0,choreographyKeyed.width,choreographyKeyed.height);
+  for(let p=0;p<cp.data.length;p+=4){const r=cp.data[p],g=cp.data[p+1],b=cp.data[p+2];if(r>145&&b>135&&g<115&&r>g*1.65&&b>g*1.6)cp.data[p+3]=0;}
+  cc.putImageData(cp,0,0);
+  const choreographyRows=[[0,270],[270,536],[536,730],[730,1024]];
+  for(let row=0;row<4;row++){choreographyFrames[row]=[];for(let i=0;i<8;i++){
+    const left=i*192,right=(i+1)*192;let minX=right,maxX=left,minY=choreographyRows[row][1],maxY=choreographyRows[row][0];
+    for(let y=choreographyRows[row][0];y<choreographyRows[row][1];y++)for(let x=left;x<right;x++){if(cp.data[(y*choreographyKeyed.width+x)*4+3]>100){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}}
+    choreographyFrames[row][i]={x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
+  }}
   ready=true;
 }
 export function drawPixelPortrait(c,index,w,h){
@@ -53,7 +64,12 @@ export function drawPixelFighter(c,f,time){
   const pose=f.blocking?3:active&&(f.action==='punch'||f.action==='uppercut'||f.action==='special')?1:active&&(f.action==='kick'||f.action==='sweep')?2:0;
   const walking=f.action==='idle'&&!f.blocking&&f.y===0&&Math.abs(f.vx)>40;
   const walkFrame=Math.floor(f.walk/2)%4;
-  const frame=walking?walkFrames[walkFrame][f.index]:frames[pose][f.index];const scale=1.16;
+  let choreography=-1;
+  if(f.hp>0&&duration&&progress<.2)choreography=0;
+  else if(f.hp>0&&active&&f.action==='sweep')choreography=2;
+  else if(f.hp>0&&active&&(f.action==='uppercut'||f.action==='special'||(f.action==='kick'&&progress<.36)))choreography=1;
+  else if(f.hp>0&&f.y<0&&!duration)choreography=3;
+  const frame=choreography>=0?choreographyFrames[choreography][f.index]:walking?walkFrames[walkFrame][f.index]:frames[pose][f.index];const scale=1.16;
   const bounce=f.hp<=0?0:Math.abs(f.vx)>40&&f.y===0?Math.sin(f.walk*2)*3:Math.sin(time*5+f.index)*1.6;
   c.save();c.imageSmoothingEnabled=false;c.translate(Math.round(f.x),Math.round(f.y+bounce));c.scale(f.facing,1);
   if(duration&&f.hp>0){const thrust=Math.sin(progress*Math.PI);c.translate(thrust*(f.action==='special'?20:9),0);c.rotate((f.action==='sweep'?.07:-.035)*thrust);}
@@ -63,10 +79,10 @@ export function drawPixelFighter(c,f,time){
   else if(f.action==='hurt'){c.rotate(-.12);c.globalAlpha=.65+Math.sin(time*65)*.25;}
   const w=frame.w*scale,h=frame.h*scale;
   // The torso stays centered as attack poses extend toward the opponent.
-  let anchor=pose===1?w*.32:pose===2?w*.28:w*.5;
-  if(f.index===7)anchor=pose===1?w*.35:w*.48;
+  let anchor=choreography===2?w*.35:choreography>=0?w*.5:pose===1?w*.32:pose===2?w*.28:w*.5;
+  if(f.index===7&&choreography<0)anchor=pose===1?w*.35:w*.48;
   const bobX=Math.abs(f.vx)>40&&pose===0?Math.sin(f.walk)*2:0;
-  c.drawImage(walking?walkKeyed:keyed,frame.x,frame.y,frame.w,frame.h,Math.round(-anchor+bobX),Math.round(-h),Math.round(w),Math.round(h));
+  c.drawImage(choreography>=0?choreographyKeyed:walking?walkKeyed:keyed,frame.x,frame.y,frame.w,frame.h,Math.round(-anchor+bobX),Math.round(-h),Math.round(w),Math.round(h));
   c.restore();return true;
 }
 
