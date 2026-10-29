@@ -9,46 +9,162 @@ export const fighters = [
   { id:'taxad', name:'Taxad', style:'Combate fiscal', tag:'O herói da fiscalização', origin:'Brasília, DF', quote:'Se tem que ser justo, vai ter imposto.', special:'Golpe do imposto', color:'#c52d32', pants:'#a6242c', skin:'#c18b69', hair:'#343733', accent:'#f3cc46', bg:'#663f3b', power:9, speed:5, defense:8, kind:'hero', effect:'#ff6550' },
 ];
 
-export const clamp = (n,a,b) => Math.max(a,Math.min(b,n));
-export function createCombatant(index, x, facing) {
-  return { data:fighters[index], index, x, y:0, vx:0, vy:0, facing, hp:100, energy:0, action:'idle', actionTime:0, cooldown:0, stun:0, attackId:0, hitTargets:new Set(), wins:0, combo:0, comboTimer:0, walk:0, blocking:false };
+// Original move sets. Both techniques are available through shortcuts and motions.
+const firstSpecials = [
+  {name:'Joelhada térmica',type:'rising',reach:165,damage:27,advance:280,duration:.65,lift:-280},
+  {name:'Giro de capoeira',type:'spin',reach:240,damage:23,advance:110,duration:.72},
+  {name:'Movimento de rua',type:'rush',reach:195,damage:25,advance:260,duration:.62},
+  {name:'Ondas de fúria',type:'wave',reach:310,damage:22,advance:50,duration:.76},
+  {name:'Choque técnico',type:'electric',reach:220,damage:26,advance:230,duration:.64},
+  {name:'Cartola giratória',type:'hat',reach:285,damage:24,advance:80,duration:.74},
+  {name:'Só força',type:'armor',reach:150,damage:34,advance:150,duration:.8,armor:true},
+  {name:'Golpe do imposto',type:'charge',reach:260,damage:28,advance:190,duration:.7},
+];
+const secondSpecials = [
+  {name:'Cotovelada solar',type:'rising',reach:125,damage:24,advance:80,duration:.72,lift:-520,vertical:250},
+  {name:'Rasteira do berimbau',type:'slide',reach:195,damage:22,advance:380,duration:.7,level:'low'},
+  {name:'Rajada do asfalto',type:'projectile',reach:0,damage:20,advance:0,duration:.64,speed:620,size:22},
+  {name:'Maré de axé',type:'projectile',reach:0,damage:23,advance:0,duration:.78,speed:370,size:38},
+  {name:'Curto-circuito',type:'rush',reach:175,damage:25,advance:590,duration:.62},
+  {name:'Passo da malandragem',type:'throw',reach:100,damage:29,advance:250,duration:.7},
+  {name:'Abalo amazônico',type:'groundWave',reach:0,damage:29,advance:0,duration:.92,speed:330,size:34,level:'low'},
+  {name:'Malha fina',type:'projectile',reach:0,damage:13,advance:0,duration:.86,speed:510,size:23,shots:2},
+];
+export const specialStyles = firstSpecials;
+export const normalActions = ['punch','kick','strongPunch','strongKick','uppercut','sweep'];
+export const specialActions = ['special','special2'];
+export const actionButtons = [...normalActions,...specialActions,'cast','grab','dodge','max'];
+export const normalStyles = {
+  punch:{duration:.28,startup:.06,recovery:.08,reach:122,damage:5,knock:13,height:150,stun:.25,rank:1},
+  kick:{duration:.34,startup:.09,recovery:.1,reach:151,damage:6,knock:20,height:115,stun:.26,rank:1},
+  strongPunch:{duration:.46,startup:.13,recovery:.17,reach:140,damage:10,knock:30,height:155,stun:.36,rank:2},
+  strongKick:{duration:.53,startup:.17,recovery:.18,reach:185,damage:13,knock:42,height:140,stun:.38,rank:2},
+  uppercut:{duration:.48,startup:.1,recovery:.12,reach:110,damage:12,knock:35,height:165,stun:.34,rank:2,vertical:210},
+  sweep:{duration:.44,startup:.09,recovery:.1,reach:155,damage:9,knock:30,height:65,stun:.3,rank:2,level:'low',down:true},
+};
+fighters.forEach((fighter,i)=>{
+  fighter.specials=[firstSpecials[i],secondSpecials[i]];
+  fighter.special=firstSpecials[i].name;
+  fighter.special2=secondSpecials[i].name;
+});
+export function specialFor(f,kind=f.action){return f.data.specials[kind==='special2'?1:0];}
+export function createTeam(indices) {
+  if(indices.length!==3 || new Set(indices).size!==3 || indices.some(i=>!Number.isInteger(i)||!fighters[i])) throw new Error('Selecione três lutadores diferentes.');
+  return {roster:[...indices],active:0};
 }
-export function attack(f, kind) {
-  if (f.hp <= 0 || f.stun>0 || f.cooldown>0 || f.blocking || (f.actionTime>0 && f.action!=='idle')) return false;
-  if(kind==='special' && f.energy<50) return false;
-  if(kind==='special') f.energy-=50;
-  f.action=kind; f.actionTime=kind==='special'?.65:kind==='cast'?.45:kind==='uppercut'?.48:kind==='sweep'?.44:kind==='kick'?.4:.28;
-  f.cooldown=kind==='special'?.85:kind==='cast'?.8:kind==='uppercut'?.58:kind==='sweep'?.53:kind==='kick'?.49:.33;
-  f.attackId++; f.hitTargets.clear(); return true;
+export function advanceTeam(team) {team.active++;return team.active<team.roster.length;}
+export function teamDefeated(team) {return team.active>=team.roster.length;}
+export function canEvade(f) {return (f.action==='dodge' && f.actionTime>.12) || (f.action==='backdash' && f.actionTime>.18);}
+export const clamp = (n,a,b) => Math.max(a,Math.min(b,n));
+export function createCombatant(index,x,facing) {
+  return {data:fighters[index],index,x,y:0,vx:0,vy:0,facing,hp:100,energy:0,action:'idle',actionTime:0,actionDuration:0,cooldown:0,stun:0,blockStun:0,
+    attackId:0,hitTargets:new Set(),wins:0,combo:0,comboTimer:0,walk:0,blocking:false,guardLow:false,guard:100,crouching:false,
+    confirmed:false,knockedDown:false,dodgeCooldown:0,maxTime:0,stance:'stand',running:false,inputTime:0,motion:[],lastDirection:5,
+    lastForward:-10,lastBack:-10,lastDown:-10,jumpAge:0,jumpType:'normal',jumpHeld:false,pendingShots:[],armor:0,hitConnected:false};
+}
+export function normalFor(f,kind=f.action,stance=f.stance){
+  const spec=normalStyles[kind];if(!spec)return null;
+  const speedOffset=(8-f.data.speed)*.003;
+  const result={...spec,duration:spec.duration+speedOffset,damage:spec.damage+f.data.power*(spec.rank===1?.45:.6),level:spec.level||'mid'};
+  if(stance==='crouch'){
+    result.height=kind.includes('Kick')||kind==='kick'||kind==='sweep'?55:90;
+    result.reach*=.92;
+    if(['kick','strongKick','sweep'].includes(kind))result.level='low';
+    if(kind==='strongKick')result.down=true;
+  }else if(stance==='air'){
+    result.level='high';result.height=100;result.reach*=.9;result.damage*=1.05;result.recovery=.06;
+  }
+  return result;
+}
+export function activateMax(f){
+  if(f.hp<=0||f.energy<50||f.maxTime>0||f.stun>0||f.knockedDown||f.y!==0||f.blocking)return false;
+  if(f.actionTime>0 && !f.confirmed)return false;
+  f.energy-=50;f.maxTime=8;return true;
+}
+export function attack(f,kind) {
+  if(kind==='cast')kind='special2';
+  if(kind==='max')return activateMax(f);
+  const special=specialActions.includes(kind),normal=normalActions.includes(kind);
+  const guardCancel=f.blockStun>0&&['dodge','guardCounter'].includes(kind)&&f.energy>=50;
+  const normalCancel=normal&&f.confirmed&&normalActions.includes(f.action)&&normalStyles[kind].rank>normalStyles[f.action].rank;
+  const specialCancel=special&&f.confirmed&&(normalActions.includes(f.action)||(f.maxTime>0&&specialActions.includes(f.action)&&f.action!==kind));
+  const cancel=normalCancel||specialCancel||guardCancel;
+  if(!normal&&!special&&!['grab','dodge','guardCounter'].includes(kind))return false;
+  if(f.hp<=0||f.knockedDown||(!guardCancel&&(f.stun>0||f.blocking))||(!cancel&&(f.cooldown>0||f.actionTime>0)))return false;
+  if((['grab','dodge','guardCounter','uppercut','sweep'].includes(kind)||(special&&!(specialCancel&&f.maxTime>0)))&&f.y!==0)return false;
+  if(kind==='dodge'&&f.dodgeCooldown>0&&!guardCancel)return false;
+  if(kind==='guardCounter'&&!guardCancel)return false;
+  const cost=guardCancel?50:special?(f.maxTime>0?25:50):0;
+  if(f.energy<cost)return false;
+  f.energy-=cost;f.cancelled=cancel;f.confirmed=false;f.hitConnected=false;f.stun=0;f.blockStun=0;f.blocking=false;
+  f.stance=kind==='uppercut'?'stand':f.y<0?'air':f.crouching?'crouch':'stand';
+  const spec=special?specialFor(f,kind):normalFor(f,kind,f.stance);
+  f.action=kind;f.actionDuration=spec?.duration||({grab:.5,dodge:.42,guardCounter:.5}[kind]);f.actionTime=f.actionDuration;
+  f.cooldown=f.actionDuration+.05;f.attackId++;f.hitTargets.clear();f.armor=special&&spec.armor?1:0;
+  f.attackFacing=f.facing;f.powered=f.maxTime>0;f.pendingShots=[];
+  if(kind==='uppercut'){f.vy=-340;f.y=-1;f.jumpHeld=false;}
+  if(kind==='dodge'){f.dodgeCooldown=1;f.dodgeFacing=f.facing;f.guardCancel=guardCancel;}
+  if(special){
+    if(spec.lift){f.vy=spec.lift;f.y=-1;}
+    if(['projectile','groundWave'].includes(spec.type))f.pendingShots=Array.from({length:spec.shots||1},(_,i)=>({at:.2+i*.16,spec,attackId:f.attackId}));
+  }
+  return true;
 }
 export function attackInfo(f) {
   const t=f.actionTime;
-  if(f.action==='uppercut' && t>.12 && t<.38) return {reach:110,damage:12+f.data.power*.7,knock:35,height:165};
-  if(f.action==='sweep' && t>.1 && t<.35) return {reach:155,damage:9+f.data.power*.5,knock:30,height:65};
-  if(f.action==='punch' && t>.08 && t<.23) return {reach:122,damage:5+f.data.power*.45,knock:13,height:150};
-  if(f.action==='kick' && t>.1 && t<.32) return {reach:163,damage:8+f.data.power*.6,knock:25,height:f.y< -30?110:120};
-  if(f.action==='special' && t>.16 && t<.51) return {reach:270,damage:16+f.data.power*.9,knock:65,height:130};
+  if(normalActions.includes(f.action)){
+    const info=normalFor(f);
+    if(t<=info.recovery||t>=info.duration-info.startup)return null;
+    return info;
+  }
+  if(f.action==='grab'&&t>.16&&t<.38)return {reach:90,damage:15+f.data.power*.5,knock:85,height:125,throw:true,down:true,stun:.85};
+  if(f.action==='guardCounter'&&t>.1&&t<.35)return {reach:195,damage:8,knock:80,height:140,down:true,stun:.85};
+  if(specialActions.includes(f.action)){
+    const spec=specialFor(f);
+    if(['projectile','groundWave'].includes(spec.type)||t<=.16||t>=spec.duration-.14)return null;
+    return {...spec,damage:spec.damage*(f.powered?1.12:1),knock:85,height:spec.level==='low'?60:135,level:spec.level||'mid',throw:spec.type==='throw',down:!f.powered,stun:.4};
+  }
   return null;
 }
-export function resolveProjectile(projectile, target) {
-  if(target.hp<=0 || Math.abs(projectile.x-target.x)>55 || Math.abs(projectile.y-(target.y-130))>90)return null;
-  const blocked=target.blocking&&target.y===0&&target.facing!==projectile.facing;
-  const damage=(6+projectile.power*.4)*(blocked?.15:1);
-  target.hp=clamp(target.hp-damage,0,100);target.stun=blocked?.1:.2;target.vx=projectile.facing*(blocked?100:240);
-  if(!blocked){target.action='hurt';target.actionTime=.24;}
-  target.energy=clamp(target.energy+5,0,100);
-  return {damage,blocked,x:projectile.x,y:550+projectile.y,kind:'cast'};
+export function guardBlocks(target,level='mid'){
+  return target.blocking&&target.y===0&&(level==='mid'||(level==='low'?target.guardLow:!target.guardLow));
 }
-export function resolveHit(a,b) {
+function takeHit(a,b,hit,kind,direction,canConfirm=true){
+  const blocked=!hit.throw&&b.facing!==direction&&guardBlocks(b,hit.level);
+  const scaling=clamp(1-(a?.combo||0)*.1,.45,1);
+  const damage=hit.damage*(blocked?.14:scaling*(1-(b.data.defense-5)*.025));
+  b.hp=clamp(b.hp-damage,0,100);b.vx=direction*(hit.knock||25)*10;
+  let guardBreak=false,armored=false;
+  if(blocked){
+    b.guard=clamp(b.guard-(hit.guardDamage||hit.damage*1.3),0,100);
+    guardBreak=b.guard===0;b.stun=guardBreak?.85:.16;b.blockStun=guardBreak?0:.16;
+    if(guardBreak){b.blocking=false;b.action='guardBreak';b.actionTime=.85;}
+  }else{
+    armored=b.armor>0&&!hit.throw;
+    if(armored){b.armor--;b.vx*=.15;}
+    else{
+      b.knockedDown=!!hit.down;b.stun=b.knockedDown?.85:(hit.stun||.25);b.blockStun=0;b.blocking=false;
+      b.action=b.knockedDown?'down':'hurt';b.actionTime=b.stun;b.pendingShots=[];
+    }
+    if(a){if(canConfirm){a.confirmed=true;a.hitConnected=true;}a.combo++;a.comboTimer=.7;}
+  }
+  if(a)a.energy=clamp(a.energy+(blocked?5:11),0,100);
+  b.energy=clamp(b.energy+6,0,100);
+  return {damage,blocked,guardBreak,armored,x:b.x,y:550+b.y-(hit.height||130),kind};
+}
+export function resolveProjectile(projectile,target){
+  if(target.hp<=0||canEvade(target)||target.knockedDown||Math.abs(projectile.x-target.x)>40+(projectile.size||22)||Math.abs(projectile.y-(target.y-(target.crouching?80:130)))>(projectile.size||22)+65)return null;
+  const hit={damage:projectile.damage??(6+projectile.power*.4),level:projectile.level||'mid',height:130,knock:24,stun:.3,down:projectile.down};
+  return takeHit(projectile.owner,target,hit,projectile.kind||'cast',projectile.facing,projectile.attackId===projectile.owner?.attackId);
+}
+export function resolveHit(a,b){
   const hit=attackInfo(a);
-  if(!hit || b.hp<=0 || a.hitTargets.has(b) || (b.x-a.x)*a.facing<0 || Math.abs(a.x-b.x)>hit.reach || Math.abs(a.y-b.y)>120) return null;
-  a.hitTargets.add(b);
-  const blocked=b.blocking && b.y===0 && b.facing!==a.facing;
-  const damage=blocked?hit.damage*.14:hit.damage*(1-(b.data.defense-5)*.025);
-  b.hp=clamp(b.hp-damage,0,100); b.stun=blocked?.1:.21; b.vx=a.facing*hit.knock*10;
-  if(!blocked){b.action='hurt';b.actionTime=.24;a.combo++;a.comboTimer=1.2;}
-  a.energy=clamp(a.energy+(blocked?5:11),0,100); b.energy=clamp(b.energy+6,0,100);
-  return {damage,blocked,x:(a.x+b.x)/2,y:550+b.y-hit.height,kind:a.action};
+  if(!hit||a.hp<=0||b.hp<=0||b.knockedDown||(!hit.throw&&canEvade(b))||(hit.throw&&(a.y!==0||b.y!==0))||a.hitTargets.has(b)||(b.x-a.x)*a.facing<0||Math.abs(a.x-b.x)>hit.reach)return null;
+  if(Math.abs(a.y-b.y)>(hit.vertical||120))return null;
+  // Body and attack boxes use the feet as their common origin.
+  const strikeY=a.y-(hit.height||130),bodyTop=b.y-(b.crouching?125:235),bodyBottom=b.y-15;
+  if(!hit.throw&&(strikeY+55<bodyTop||strikeY-55>bodyBottom))return null;
+  a.hitTargets.add(b);return takeHit(a,b,hit,a.action,a.facing);
 }
 
 function shape(c,points,fill,stroke='#17221f',width=2) {
@@ -57,10 +173,10 @@ function shape(c,points,fill,stroke='#17221f',width=2) {
 function ellipse(c,x,y,rx,ry,fill,stroke='#17221f',width=2){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}}
 function limb(c,a,b,width,color,outline=true){c.lineCap='round';if(outline){c.strokeStyle='#18201a';c.lineWidth=width+4;c.beginPath();c.moveTo(...a);c.lineTo(...b);c.stroke();}c.strokeStyle=color;c.lineWidth=width;c.beginPath();c.moveTo(...a);c.lineTo(...b);c.stroke();c.strokeStyle='#ffffff19';c.lineWidth=width*.2;c.beginPath();c.moveTo(a[0]-3,a[1]);c.lineTo(b[0]-3,b[1]);c.stroke();}
 export function drawFighter(c,f,{portrait=false,time=0}={}) {
-  const d=f.data, kick=f.action==='kick', punch=f.action==='punch', special=f.action==='special', hurt=f.action==='hurt', dead=f.hp<=0;
+  const d=f.data, kick=['kick','strongKick','sweep'].includes(f.action), punch=['punch','strongPunch','uppercut','grab'].includes(f.action), special=specialActions.includes(f.action), hurt=f.action==='hurt', dead=f.hp<=0;
   const phase= Math.sin(time*5+f.index), walking=Math.abs(f.vx)>40 && f.y===0 && !punch && !kick && !special;
   const bob=portrait?0:walking?Math.sin(f.walk*2)*2:phase*2;
-  c.save();c.translate(f.x,f.y+bob);c.scale(f.facing,1);
+  c.save();c.translate(f.x,f.y+bob);c.scale(f.facing,1);if(f.crouching&&f.y===0)c.scale(1,.67);
   if(dead){c.translate(0,-10);c.rotate(-1.45);}
   if(hurt) c.rotate(-.1);
   const bulk=d.kind==='brute'?1.22:d.kind==='hero'?1.13:1;

@@ -7,6 +7,6 @@
     "dev": "node server.mjs",
     "start": "node server.mjs",
     "test": "node tests/combat.test.mjs",
-    "check": "node --check src/game.js && node --check src/fighters.js && node --check src/pixel-art.js && node --check src/lan.js && node --check src/controle.js && node --check server.mjs"
+    "check": "node --check src/game.js && node --check src/combat.js && node --check src/fighters.js && node --check src/pixel-art.js && node --check src/lan.js && node --check src/controle.js && node --check server.mjs"
   }
 }

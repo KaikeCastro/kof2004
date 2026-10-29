@@ -1,3 +1,4 @@
+import {normalActions,specialActions} from './fighters.js';
 // Original generated game assets. A chroma-keyed atlas keeps the game dependency-free.
 const portraitAtlas=new Image(), fighterAtlas=new Image(), walkAtlas=new Image(), choreographyAtlas=new Image(),specialAtlas=new Image();
 const rioStage=new Image(),brasiliaStage=new Image(),novasFases=new Image();
@@ -67,31 +68,38 @@ export function drawPixelPortrait(c,index,w,h){
 export function pixelPortraitURL(index){const c=document.createElement('canvas');c.width=128;c.height=144;drawPixelPortrait(c.getContext('2d'),index,128,144);return c.toDataURL();}
 export function drawPixelFighter(c,f,time){
   if(!ready)return false;
-  const durations={punch:.28,kick:.4,uppercut:.48,sweep:.44,special:.65,cast:.45};
-  const duration=durations[f.action]||0;
+  const action=f.action==='guardCounter'?'kick':f.action==='strongPunch'?'punch':f.action==='strongKick'?(f.stance==='crouch'?'sweep':'kick'):f.action==='special2'?'special':f.action;
+  const durations={punch:.28,kick:.4,uppercut:.48,sweep:.44,special:([.65,.72,.62,.76,.64,.74,.8,.7][f.index]),cast:.45,grab:.5,dodge:.42};
+  const duration=(normalActions.includes(f.action)||specialActions.includes(f.action)?f.actionDuration:durations[action])||0;
   const progress=duration?Math.max(0,Math.min(1,1-f.actionTime/duration)):0;
   // Wind-up, active strike and recovery use separate poses and movement.
   const active=duration&&progress>.14&&progress<.8;
-  const pose=f.blocking?3:active&&(f.action==='punch'||f.action==='uppercut'||f.action==='special'||f.action==='cast')?1:active&&(f.action==='kick'||f.action==='sweep')?2:0;
-  const walking=f.action==='idle'&&!f.blocking&&f.y===0&&Math.abs(f.vx)>40;
+  const pose=f.blocking?3:active&&(action==='grab'||action==='punch'||action==='uppercut'||action==='special'||action==='cast')?1:active&&(action==='kick'||action==='sweep')?2:0;
+  const walking=action==='idle'&&!f.blocking&&f.y===0&&Math.abs(f.vx)>40;
   const walkFrame=Math.floor(f.walk/2)%4;
   let choreography=-1;
   if(f.hp>0&&duration&&progress<.2)choreography=0;
-  else if(f.hp>0&&active&&f.action==='sweep')choreography=2;
-  else if(f.hp>0&&active&&(f.action==='uppercut'||f.action==='special'||(f.action==='kick'&&progress<.36)))choreography=1;
+  else if(f.hp>0&&active&&action==='sweep')choreography=2;
+  else if(f.hp>0&&active&&(action==='uppercut'||action==='special'||(action==='kick'&&progress<.36)))choreography=1;
   else if(f.hp>0&&f.y<0&&!duration)choreography=3;
   let specialPose=-1;
-  if(f.hp>0&&(f.action==='cast'||f.action==='special'))specialPose=progress<.34?0:progress<.85?1:-1;
-  else if(f.hp>0&&f.action==='victory')specialPose=3;
-  else if(f.hp>0&&f.action==='kick'&&active&&[1,2,3].includes(f.index)&&progress>.36)specialPose=2;
+  if(f.hp>0&&(action==='cast'||action==='special'))specialPose=progress<.34?0:progress<.85?1:-1;
+  else if(f.hp>0&&action==='victory')specialPose=3;
+  else if(f.hp>0&&action==='kick'&&active&&[1,2,3].includes(f.index)&&progress>.36)specialPose=2;
   const frame=specialPose>=0?specialFrames[specialPose][f.index]:choreography>=0?choreographyFrames[choreography][f.index]:walking?walkFrames[walkFrame][f.index]:frames[pose][f.index];const scale=1.16;
   const bounce=f.hp<=0?0:Math.abs(f.vx)>40&&f.y===0?Math.sin(f.walk*2)*3:Math.sin(time*5+f.index)*1.6;
   c.save();c.imageSmoothingEnabled=false;c.translate(Math.round(f.x),Math.round(f.y+bounce));c.scale(f.facing,1);
-  if(duration&&f.hp>0){const thrust=Math.sin(progress*Math.PI);c.translate(thrust*(f.action==='special'?20:9),0);c.rotate((f.action==='sweep'?.07:-.035)*thrust);}
+  if((f.crouching||f.stance==='crouch'&&duration)&&f.y===0&&!f.knockedDown)c.scale(1,.67);
+  if(f.maxTime>0){c.shadowColor='#ec67ff';c.shadowBlur=14;}
+  if(action==='backdash'){c.rotate(-.16);}
+  if(duration&&f.hp>0){const thrust=Math.sin(progress*Math.PI);c.translate(thrust*(action==='special'?20:9),0);c.rotate((action==='sweep'?.07:-.035)*thrust);}
   if(f.y<0&&f.hp>0)c.rotate(Math.max(-.1,Math.min(.1,f.vy/6000)));
-  if(f.action==='idle'&&f.y===0){const stride=Math.abs(f.vx)>40?Math.sin(f.walk)*.035:Math.sin(time*4+f.index)*.008;c.rotate(stride);c.scale(1,1+Math.abs(stride)*.2);}
+  if(action==='idle'&&f.y===0){const stride=Math.abs(f.vx)>40?Math.sin(f.walk)*.035:Math.sin(time*4+f.index)*.008;c.rotate(stride);c.scale(1,1+Math.abs(stride)*.2);}
+  if(action==='dodge'){c.globalAlpha=.45;c.translate(0,-30);c.rotate(.45);c.scale(1,.65);}
+  if(action==='down'&&f.hp>0){c.translate(0,-8);c.rotate(-Math.PI/2*Math.min(1,(.85-f.actionTime)*5));}
+  if(action==='rise'){c.rotate(-Math.PI/2*(f.actionTime/.3));c.scale(1,.8+(1-f.actionTime/.3)*.2);}
   if(f.hp<=0){c.translate(0,-5);c.rotate(-Math.PI/2);}
-  else if(f.action==='hurt'){c.rotate(-.12);c.globalAlpha=.65+Math.sin(time*65)*.25;}
+  else if(action==='hurt'){c.rotate(-.12);c.globalAlpha=.65+Math.sin(time*65)*.25;}
   const w=frame.w*scale,h=frame.h*scale;
   // The torso stays centered as attack poses extend toward the opponent.
   let anchor=specialPose===1||specialPose===2?w*.37:specialPose>=0?w*.5:choreography===2?w*.35:choreography>=0?w*.5:pose===1?w*.32:pose===2?w*.28:w*.5;

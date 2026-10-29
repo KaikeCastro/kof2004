@@ -1,3 +1,4 @@
+import {actionButtons} from './fighters.js';
 // LAN rooms: one host and one controller. Room data stays in this Node process.
 import { randomBytes } from 'node:crypto';
 import { networkInterfaces } from 'node:os';
@@ -21,7 +22,7 @@ export async function lan(req,res,url){
   if(req.method==='POST'&&['input','frame'].includes(parts[3])){
     if(parts[3]==='frame'&&req.headers['x-host-token']!==room.host){reply(res,403,{error:'Acesso negado'});return true;}
     let body='';try{for await(const chunk of req){body+=chunk;if(body.length>400000)throw new Error('too large');}const data=JSON.parse(body);room.updated=Date.now();
-      if(parts[3]==='input'){room.guest=true;room.lastInput=Date.now();room.input=Object.fromEntries(['left','right','jump','block','punch','kick','special','uppercut','sweep','cast'].map(k=>[k,data[k]===true]));}
+      if(parts[3]==='input'){room.guest=true;room.lastInput=Date.now();room.input=Object.fromEntries(['left','right','down','jump','block',...actionButtons].map(k=>[k,data[k]===true]));room.input.presses=Object.fromEntries(['jump',...actionButtons].map(k=>[k,Number.isSafeInteger(data.presses?.[k])&&data.presses[k]>=0?data.presses[k]:0]));}
       else if(typeof data.image==='string'&&data.image.startsWith('data:image/jpeg;base64,')&&data.image.length<350000)room.frame=data;
       else throw new Error('invalid');reply(res,200,{ok:true});
     }catch{reply(res,400,{error:'Dados inválidos'});}return true;
