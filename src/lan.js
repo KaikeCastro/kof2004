@@ -21,7 +21,7 @@ export async function lan(req,res,url){
   if(req.method==='POST'&&['input','frame'].includes(parts[3])){
     if(parts[3]==='frame'&&req.headers['x-host-token']!==room.host){reply(res,403,{error:'Acesso negado'});return true;}
     let body='';try{for await(const chunk of req){body+=chunk;if(body.length>400000)throw new Error('too large');}const data=JSON.parse(body);room.updated=Date.now();
-      if(parts[3]==='input'){room.guest=true;room.lastInput=Date.now();room.input=Object.fromEntries(['left','right','jump','block','punch','kick','special','uppercut','sweep'].map(k=>[k,data[k]===true]));}
+      if(parts[3]==='input'){room.guest=true;room.lastInput=Date.now();room.input=Object.fromEntries(['left','right','jump','block','punch','kick','special','uppercut','sweep','cast'].map(k=>[k,data[k]===true]));}
       else if(typeof data.image==='string'&&data.image.startsWith('data:image/jpeg;base64,')&&data.image.length<350000)room.frame=data;
       else throw new Error('invalid');reply(res,200,{ok:true});
     }catch{reply(res,400,{error:'Dados inválidos'});}return true;

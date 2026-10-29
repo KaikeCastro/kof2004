@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fighters, createCombatant, attack, resolveHit } from '../src/fighters.js';
+import { fighters, createCombatant, attack, resolveHit, resolveProjectile } from '../src/fighters.js';
 
 test('roster contains all eight referenced characters',()=>{
   assert.equal(fighters.length,8);assert.equal(new Set(fighters.map(f=>f.id)).size,8);
@@ -37,4 +37,11 @@ test('gancho e rasteira atingem na distância correta e respeitam o tempo do gol
     a.hitTargets.clear();a.actionTime=.01;
     assert.equal(resolveHit(a,b),null);
   }
+});
+
+test('lançamento acerta à distância, respeita altura e defesa',()=>{
+  const target=createCombatant(1,600,-1), shot={x:600,y:-130,facing:1,power:8};
+  assert.ok(resolveProjectile(shot,target));const damage=100-target.hp;assert.ok(damage>0);
+  const blocked=createCombatant(1,600,-1);blocked.blocking=true;assert.ok(resolveProjectile(shot,blocked).blocked);assert.ok(100-blocked.hp<damage);
+  assert.equal(resolveProjectile({...shot,y:-400},blocked),null);
 });

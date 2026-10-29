@@ -25,14 +25,15 @@ Selecione um personagem, dificuldade e cenário, e clique em **Vamos pra luta**.
 | Soco | J | 1 |
 | Chute | K | 2 |
 | Especial | L | 3 |
+| Lançar energia | O | 6 |
 | Gancho | U | 4 |
 | Rasteira | I | 5 |
 
-O jogador 2 também pode usar as teclas 1 a 5 do teclado numérico.
+O jogador 2 também pode usar as teclas 1 a 6 do teclado numérico.
 
 O especial exige 50% de energia. Golpes acertados e recebidos carregam a barra. A defesa reduz o dano, mas impede atacar e andar. ESC pausa; M ativa/desativa o áudio sintetizado. O áudio começa desligado. Em telas de toque há controles na tela para o jogador 1. O modo de dois jogadores exige teclado compartilhado.
 
-Quatro cenários ilustrados: Rio, Brasília, Salvador e São Paulo. Carregamento, seleção, efeitos de golpes, combos, defesa, rounds, desempate, pausa, resultado e revanche. Empates repetem o round até alguém vencer dois. O progresso da seleção fica salvo localmente; partidas não são persistidas.
+Quatro cenários ilustrados: Rio, Brasília, Salvador e São Paulo. Carregamento, seleção, apresentação dos estilos antes da luta, projéteis de energia, especiais, combos, defesa, rounds, comemoração, pausa, resultado e revanche. Empates repetem o round até alguém vencer dois. O progresso da seleção fica salvo localmente; partidas não são persistidas.
 
 ## Verificar
 

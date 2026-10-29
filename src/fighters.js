@@ -17,8 +17,8 @@ export function attack(f, kind) {
   if (f.hp <= 0 || f.stun>0 || f.cooldown>0 || f.blocking || (f.actionTime>0 && f.action!=='idle')) return false;
   if(kind==='special' && f.energy<50) return false;
   if(kind==='special') f.energy-=50;
-  f.action=kind; f.actionTime=kind==='special'?.65:kind==='uppercut'?.48:kind==='sweep'?.44:kind==='kick'?.4:.28;
-  f.cooldown=kind==='special'?.85:kind==='uppercut'?.58:kind==='sweep'?.53:kind==='kick'?.49:.33;
+  f.action=kind; f.actionTime=kind==='special'?.65:kind==='cast'?.45:kind==='uppercut'?.48:kind==='sweep'?.44:kind==='kick'?.4:.28;
+  f.cooldown=kind==='special'?.85:kind==='cast'?.8:kind==='uppercut'?.58:kind==='sweep'?.53:kind==='kick'?.49:.33;
   f.attackId++; f.hitTargets.clear(); return true;
 }
 export function attackInfo(f) {
@@ -29,6 +29,15 @@ export function attackInfo(f) {
   if(f.action==='kick' && t>.1 && t<.32) return {reach:163,damage:8+f.data.power*.6,knock:25,height:f.y< -30?110:120};
   if(f.action==='special' && t>.16 && t<.51) return {reach:270,damage:16+f.data.power*.9,knock:65,height:130};
   return null;
+}
+export function resolveProjectile(projectile, target) {
+  if(target.hp<=0 || Math.abs(projectile.x-target.x)>55 || Math.abs(projectile.y-(target.y-130))>90)return null;
+  const blocked=target.blocking&&target.y===0&&target.facing!==projectile.facing;
+  const damage=(6+projectile.power*.4)*(blocked?.15:1);
+  target.hp=clamp(target.hp-damage,0,100);target.stun=blocked?.1:.2;target.vx=projectile.facing*(blocked?100:240);
+  if(!blocked){target.action='hurt';target.actionTime=.24;}
+  target.energy=clamp(target.energy+5,0,100);
+  return {damage,blocked,x:projectile.x,y:550+projectile.y,kind:'cast'};
 }
 export function resolveHit(a,b) {
   const hit=attackInfo(a);
