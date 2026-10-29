@@ -1,11 +1,11 @@
 // Original generated game assets. A chroma-keyed atlas keeps the game dependency-free.
 const portraitAtlas=new Image(), fighterAtlas=new Image();
-const rioStage=new Image(),brasiliaStage=new Image();
+const rioStage=new Image(),brasiliaStage=new Image(),novasFases=new Image();
 let keyed,ready=false;
 const frames=[];
 function imageReady(img,url){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error(`Falha ao carregar ${url}`));img.src=url;});}
 export async function loadPixelArt(){
-  await Promise.all([imageReady(portraitAtlas,'/assets/art/portraits-sheet.png'),imageReady(fighterAtlas,'/assets/art/fighters-sheet.png'),imageReady(rioStage,'/assets/art/rio-stage.png'),imageReady(brasiliaStage,'/assets/art/brasilia-stage.png')]);
+  await Promise.all([imageReady(portraitAtlas,'/assets/art/portraits-sheet.png'),imageReady(fighterAtlas,'/assets/art/fighters-sheet.png'),imageReady(rioStage,'/assets/art/rio-stage.png'),imageReady(brasiliaStage,'/assets/art/brasilia-stage.png'),imageReady(novasFases,'/assets/art/novas-fases.png')]);
   keyed=document.createElement('canvas');keyed.width=fighterAtlas.width;keyed.height=fighterAtlas.height;
   const c=keyed.getContext('2d',{willReadFrequently:true});c.drawImage(fighterAtlas,0,0);const pixels=c.getImageData(0,0,keyed.width,keyed.height);
   for(let p=0;p<pixels.data.length;p+=4){const r=pixels.data[p],g=pixels.data[p+1],b=pixels.data[p+2];if(r>145&&b>135&&g<115&&r>g*1.65&&b>g*1.6)pixels.data[p+3]=0;}
@@ -34,10 +34,11 @@ export function drawPixelPortrait(c,index,w,h){
 export function pixelPortraitURL(index){const c=document.createElement('canvas');c.width=128;c.height=144;drawPixelPortrait(c.getContext('2d'),index,128,144);return c.toDataURL();}
 export function drawPixelFighter(c,f,time){
   if(!ready)return false;
-  const pose=f.blocking?3:f.action==='punch'?1:f.action==='kick'?2:f.action==='special'?1:0;
+  const pose=f.blocking?3:(f.action==='punch'||f.action==='uppercut')?1:(f.action==='kick'||f.action==='sweep')?2:f.action==='special'?1:0;
   const frame=frames[pose][f.index];const scale=1.16;
   const bounce=f.hp<=0?0:Math.abs(f.vx)>40&&f.y===0?Math.sin(f.walk*2)*3:Math.sin(time*5+f.index)*1.6;
   c.save();c.imageSmoothingEnabled=false;c.translate(Math.round(f.x),Math.round(f.y+bounce));c.scale(f.facing,1);
+  if(f.action==='idle'&&f.y===0){const stride=Math.abs(f.vx)>40?Math.sin(f.walk)*.035:Math.sin(time*4+f.index)*.008;c.rotate(stride);c.scale(1,1+Math.abs(stride)*.2);}
   if(f.hp<=0){c.translate(0,-5);c.rotate(-Math.PI/2);}
   else if(f.action==='hurt'){c.rotate(-.12);c.globalAlpha=.65+Math.sin(time*65)*.25;}
   const w=frame.w*scale,h=frame.h*scale;
@@ -49,4 +50,4 @@ export function drawPixelFighter(c,f,time){
   c.restore();return true;
 }
 
-export function drawPixelStage(c,arena){if(!ready)return false;c.save();c.imageSmoothingEnabled=false;c.drawImage(arena==='rio'?rioStage:brasiliaStage,0,0,1280,720);c.restore();return true;}
+export function drawPixelStage(c,arena){if(!ready)return false;c.save();c.imageSmoothingEnabled=false;if(arena==='salvador'||arena==='saopaulo'){const w=novasFases.width/2;c.drawImage(novasFases,arena==='salvador'?0:w,0,w,novasFases.height,0,0,1280,720);}else c.drawImage(arena==='rio'?rioStage:brasiliaStage,0,0,1280,720);c.restore();return true;}

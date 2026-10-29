@@ -28,3 +28,13 @@ test('combat awards energy, clamps health and cannot hit an already defeated opp
   attack(a,'kick');a.actionTime=.2;assert.ok(resolveHit(a,b));assert.equal(b.hp,0);assert.equal(a.energy,100);
   a.hitTargets.clear();assert.equal(resolveHit(a,b),null);
 });
+test('gancho e rasteira atingem na distância correta e respeitam o tempo do golpe',()=>{
+  for(const kind of ['uppercut','sweep']){
+    const a=createCombatant(0,300,1),b=createCombatant(1,395,-1);
+    assert.equal(attack(a,kind),true);a.actionTime=.25;
+    assert.ok(resolveHit(a,b),`${kind} deve atingir o adversário`);
+    assert.ok(b.hp<100);
+    a.hitTargets.clear();a.actionTime=.01;
+    assert.equal(resolveHit(a,b),null);
+  }
+});

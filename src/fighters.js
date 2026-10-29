@@ -17,12 +17,14 @@ export function attack(f, kind) {
   if (f.hp <= 0 || f.stun>0 || f.cooldown>0 || f.blocking || (f.actionTime>0 && f.action!=='idle')) return false;
   if(kind==='special' && f.energy<50) return false;
   if(kind==='special') f.energy-=50;
-  f.action=kind; f.actionTime=kind==='special'?.65:kind==='kick'?.4:.28;
-  f.cooldown=kind==='special'?.85:kind==='kick'?.49:.33;
+  f.action=kind; f.actionTime=kind==='special'?.65:kind==='uppercut'?.48:kind==='sweep'?.44:kind==='kick'?.4:.28;
+  f.cooldown=kind==='special'?.85:kind==='uppercut'?.58:kind==='sweep'?.53:kind==='kick'?.49:.33;
   f.attackId++; f.hitTargets.clear(); return true;
 }
 export function attackInfo(f) {
   const t=f.actionTime;
+  if(f.action==='uppercut' && t>.12 && t<.38) return {reach:110,damage:12+f.data.power*.7,knock:35,height:165};
+  if(f.action==='sweep' && t>.1 && t<.35) return {reach:155,damage:9+f.data.power*.5,knock:30,height:65};
   if(f.action==='punch' && t>.08 && t<.23) return {reach:122,damage:5+f.data.power*.45,knock:13,height:150};
   if(f.action==='kick' && t>.1 && t<.32) return {reach:163,damage:8+f.data.power*.6,knock:25,height:f.y< -30?110:120};
   if(f.action==='special' && t>.16 && t<.51) return {reach:270,damage:16+f.data.power*.9,knock:65,height:130};

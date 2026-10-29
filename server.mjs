@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { lan } from './src/lan.js';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -7,7 +8,9 @@ const port = Number(process.env.PORT || 3000);
 const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json' };
 http.createServer(async (req, res) => {
   try {
-    const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+    const url = new URL(req.url, 'http://localhost');
+    if(await lan(req,res,url)) return;
+    const pathname = decodeURIComponent(url.pathname);
     const file = path.resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
     if (!file.startsWith(root + path.sep) || pathname.split('/').some(p => p.startsWith('.'))) {
       res.writeHead(403); return res.end('Forbidden');

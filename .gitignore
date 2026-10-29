@@ -2,3 +2,6 @@ node_modules/
 test-results/
 playwright-report/
 *.log
+android/.gradle/
+android/**/build/
+android/local.properties
