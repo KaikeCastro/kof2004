@@ -1,6 +1,9 @@
 package br.com.brasilfighters;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.widget.EditText;
+import android.webkit.JavascriptInterface;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -21,6 +24,22 @@ public class MainActivity extends Activity {
                 return loader.shouldInterceptRequest(request.getUrl());
             }
         });
+        web.addJavascriptInterface(new Object() {
+            @JavascriptInterface public void connectWifi() {
+                runOnUiThread(() -> {
+                    EditText input = new EditText(MainActivity.this);
+                    input.setSingleLine(true);
+                    input.setHint("http://192.168.../controle.html?room=...");
+                    new AlertDialog.Builder(MainActivity.this).setTitle("Entrar na partida Wi-Fi")
+                        .setMessage("Cole o endereço exibido no computador que está hospedando a partida.")
+                        .setView(input).setNegativeButton("Cancelar", null)
+                        .setPositiveButton("Conectar", (dialog, which) -> {
+                            String address = input.getText().toString().trim();
+                            if (address.startsWith("http://") && address.contains("/controle.html?room=")) web.loadUrl(address);
+                        }).show();
+                });
+            }
+        }, "AndroidApp");
         setContentView(web);
         web.loadUrl("https://appassets.androidplatform.net/index.html");
     }

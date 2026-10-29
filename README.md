@@ -41,12 +41,12 @@ npm run check
 npm test
 ```
 
-O jogo usa Canvas 2D, HTML e CSS. Fontes são locais e têm fallback e o jogo funciona sem serviços externos, contas ou chaves. É um protótipo em pixel art, com sprites e retratos próprios gerados para estes personagens, quatro poses-base por lutador e IA simples. Não reproduz integralmente KOF 2002: não inclui times de três, o conjunto completo de animações ou multiplayer online.
+O jogo usa Canvas 2D, HTML e CSS. Fontes são locais e têm fallback e o jogo funciona sem serviços externos, contas ou chaves. É um protótipo em pixel art, com sprites e retratos próprios gerados para estes personagens, quatro poses-base e quatro quadros de caminhada por lutador e IA simples. Não reproduz integralmente KOF 2002: não inclui times de três, o conjunto completo de animações ou multiplayer online.
 
 ## Dois jogadores no Wi-Fi local (experimental)
 
 Um computador deve executar `npm run dev` e os dois aparelhos devem estar na mesma rede Wi-Fi. No computador, clique em **JOGAR POR WI-FI** na seleção. Abra o endereço exibido no navegador do segundo aparelho. Depois que ele conectar, escolha os personagens no computador e inicie a luta. O segundo aparelho mostra a luta e tem botões próprios. Se o endereço sugerido não for o IP do computador na rede Wi-Fi, substitua-o pelo endereço IPv4 exibido em `ipconfig` no Windows. A transmissão usa imagens periódicas e pode ter atraso; não é multiplayer online nem conexão direta entre dois celulares.
 
-## Projeto Android (ainda não compilado)
+## Android
 
-O diretório `android/` contém um aplicativo WebView para abrir o jogo localmente. Abra essa pasta no Android Studio, instale o SDK 35 e gere um APK de depuração pelo menu Build. O modo Wi-Fi ainda exige um computador rodando o servidor; no celular use o navegador para entrar como jogador 2. Este projeto ainda precisa ser compilado e testado em um aparelho Android antes de ser considerado pronto para distribuição.
+O APK de teste está em `downloads/BrasilFighters-debug.apk`. Ele foi compilado e sua assinatura verificada, mas ainda não foi testado em um aparelho Android. Para o Wi-Fi, um computador deve hospedar a partida: no aplicativo Android, toque em **Entrar no Wi-Fi pelo celular** e cole o endereço da sala exibido no computador. Para compilar novamente, abra `android/` no Android Studio, instale o SDK 35 e gere um APK de depuração pelo menu Build. Por ser uma versão de teste assinada com chave de depuração, futuras versões com outra chave podem exigir desinstalar esta antes de instalar.

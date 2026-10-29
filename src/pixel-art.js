@@ -1,11 +1,12 @@
 // Original generated game assets. A chroma-keyed atlas keeps the game dependency-free.
-const portraitAtlas=new Image(), fighterAtlas=new Image();
+const portraitAtlas=new Image(), fighterAtlas=new Image(), walkAtlas=new Image();
 const rioStage=new Image(),brasiliaStage=new Image(),novasFases=new Image();
-let keyed,ready=false;
+let keyed,walkKeyed,ready=false;
+const walkFrames=[];
 const frames=[];
 function imageReady(img,url){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error(`Falha ao carregar ${url}`));img.src=url;});}
 export async function loadPixelArt(){
-  await Promise.all([imageReady(portraitAtlas,'/assets/art/portraits-sheet.png'),imageReady(fighterAtlas,'/assets/art/fighters-sheet.png'),imageReady(rioStage,'/assets/art/rio-stage.png'),imageReady(brasiliaStage,'/assets/art/brasilia-stage.png'),imageReady(novasFases,'/assets/art/novas-fases.png')]);
+  await Promise.all([imageReady(portraitAtlas,'/assets/art/portraits-sheet.png'),imageReady(fighterAtlas,'/assets/art/fighters-sheet.png'),imageReady(walkAtlas,'/assets/art/caminhada.png'),imageReady(rioStage,'/assets/art/rio-stage.png'),imageReady(brasiliaStage,'/assets/art/brasilia-stage.png'),imageReady(novasFases,'/assets/art/novas-fases.png')]);
   keyed=document.createElement('canvas');keyed.width=fighterAtlas.width;keyed.height=fighterAtlas.height;
   const c=keyed.getContext('2d',{willReadFrequently:true});c.drawImage(fighterAtlas,0,0);const pixels=c.getImageData(0,0,keyed.width,keyed.height);
   for(let p=0;p<pixels.data.length;p+=4){const r=pixels.data[p],g=pixels.data[p+1],b=pixels.data[p+2];if(r>145&&b>135&&g<115&&r>g*1.65&&b>g*1.6)pixels.data[p+3]=0;}
@@ -22,6 +23,16 @@ export async function loadPixelArt(){
     for(let y=rows[pose][0];y<rows[pose][1];y++)for(let x=left;x<right;x++){const p=(y*keyed.width+x)*4;if(pixels.data[p+3]>100){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}}
     frames[pose][i]={x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
   }}
+  walkKeyed=document.createElement('canvas');walkKeyed.width=walkAtlas.width;walkKeyed.height=walkAtlas.height;
+  const wc=walkKeyed.getContext('2d',{willReadFrequently:true});wc.drawImage(walkAtlas,0,0);const wp=wc.getImageData(0,0,walkKeyed.width,walkKeyed.height);
+  for(let p=0;p<wp.data.length;p+=4){const r=wp.data[p],g=wp.data[p+1],b=wp.data[p+2];if(r>145&&b>135&&g<115&&r>g*1.65&&b>g*1.6)wp.data[p+3]=0;}
+  wc.putImageData(wp,0,0);
+  const walkRows=[[0,274],[274,524],[524,776],[776,1024]];
+  for(let row=0;row<4;row++){walkFrames[row]=[];for(let i=0;i<8;i++){
+    const left=i*192,right=(i+1)*192;let minX=right,maxX=left,minY=walkRows[row][1],maxY=walkRows[row][0];
+    for(let y=walkRows[row][0];y<walkRows[row][1];y++)for(let x=left;x<right;x++){if(wp.data[(y*walkKeyed.width+x)*4+3]>100){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}}
+    walkFrames[row][i]={x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
+  }}
   ready=true;
 }
 export function drawPixelPortrait(c,index,w,h){
@@ -34,10 +45,19 @@ export function drawPixelPortrait(c,index,w,h){
 export function pixelPortraitURL(index){const c=document.createElement('canvas');c.width=128;c.height=144;drawPixelPortrait(c.getContext('2d'),index,128,144);return c.toDataURL();}
 export function drawPixelFighter(c,f,time){
   if(!ready)return false;
-  const pose=f.blocking?3:(f.action==='punch'||f.action==='uppercut')?1:(f.action==='kick'||f.action==='sweep')?2:f.action==='special'?1:0;
-  const frame=frames[pose][f.index];const scale=1.16;
+  const durations={punch:.28,kick:.4,uppercut:.48,sweep:.44,special:.65};
+  const duration=durations[f.action]||0;
+  const progress=duration?Math.max(0,Math.min(1,1-f.actionTime/duration)):0;
+  // Wind-up, active strike and recovery use separate poses and movement.
+  const active=duration&&progress>.14&&progress<.8;
+  const pose=f.blocking?3:active&&(f.action==='punch'||f.action==='uppercut'||f.action==='special')?1:active&&(f.action==='kick'||f.action==='sweep')?2:0;
+  const walking=f.action==='idle'&&!f.blocking&&f.y===0&&Math.abs(f.vx)>40;
+  const walkFrame=Math.floor(f.walk/2)%4;
+  const frame=walking?walkFrames[walkFrame][f.index]:frames[pose][f.index];const scale=1.16;
   const bounce=f.hp<=0?0:Math.abs(f.vx)>40&&f.y===0?Math.sin(f.walk*2)*3:Math.sin(time*5+f.index)*1.6;
   c.save();c.imageSmoothingEnabled=false;c.translate(Math.round(f.x),Math.round(f.y+bounce));c.scale(f.facing,1);
+  if(duration&&f.hp>0){const thrust=Math.sin(progress*Math.PI);c.translate(thrust*(f.action==='special'?20:9),0);c.rotate((f.action==='sweep'?.07:-.035)*thrust);}
+  if(f.y<0&&f.hp>0)c.rotate(Math.max(-.1,Math.min(.1,f.vy/6000)));
   if(f.action==='idle'&&f.y===0){const stride=Math.abs(f.vx)>40?Math.sin(f.walk)*.035:Math.sin(time*4+f.index)*.008;c.rotate(stride);c.scale(1,1+Math.abs(stride)*.2);}
   if(f.hp<=0){c.translate(0,-5);c.rotate(-Math.PI/2);}
   else if(f.action==='hurt'){c.rotate(-.12);c.globalAlpha=.65+Math.sin(time*65)*.25;}
@@ -46,7 +66,7 @@ export function drawPixelFighter(c,f,time){
   let anchor=pose===1?w*.32:pose===2?w*.28:w*.5;
   if(f.index===7)anchor=pose===1?w*.35:w*.48;
   const bobX=Math.abs(f.vx)>40&&pose===0?Math.sin(f.walk)*2:0;
-  c.drawImage(keyed,frame.x,frame.y,frame.w,frame.h,Math.round(-anchor+bobX),Math.round(-h),Math.round(w),Math.round(h));
+  c.drawImage(walking?walkKeyed:keyed,frame.x,frame.y,frame.w,frame.h,Math.round(-anchor+bobX),Math.round(-h),Math.round(w),Math.round(h));
   c.restore();return true;
 }
 
