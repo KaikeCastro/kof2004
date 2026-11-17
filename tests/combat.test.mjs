@@ -280,3 +280,23 @@ test('each fighter has an individual choreography that follows attack progress',
     f.actionTime=f.actionDuration;assert.ok(Math.abs(animationPose(f).shift)<1e-6);
   }
 });
+
+test('four CPU levels increase reaction, guard and anti-air skill',async()=>{
+  const {aiSettings,decideAI}=await import('../src/ai.js');
+  const levels=['easy','normal','hard','expert'];
+  const configs=levels.map(aiSettings);
+  for(let i=1;i<configs.length;i++){
+    assert.ok(configs[i].delay<configs[i-1].delay);
+    assert.ok(configs[i].guard>configs[i-1].guard);
+    assert.ok(configs[i].cancel>configs[i-1].cancel);
+  }
+  const cpu=createCombatant(1,500,-1),rival=createCombatant(0,400,1);
+  rival.action='punch';rival.actionTime=.15;
+  assert.notEqual(decideAI(cpu,rival,[],'easy',()=>.25).block,true);
+  assert.equal(decideAI(cpu,rival,[],'expert',()=>.25).block,true);
+  const wave={owner:rival,x:400,facing:1,level:'low'};
+  assert.equal(decideAI(cpu,rival,[wave],'expert',()=>.25).down,true);
+  rival.action='idle';rival.actionTime=0;rival.y=-70;
+  assert.equal(decideAI(cpu,rival,[],'expert',()=>.3).uppercut,true);
+  assert.notEqual(decideAI(cpu,rival,[],'easy',()=>.3).uppercut,true);
+});

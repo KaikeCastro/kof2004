@@ -22,6 +22,12 @@ with sync_playwright() as p:
     page.screenshot(path=str(ARTIFACTS/'title.png'))
     page.keyboard.press('Enter')
     assert page.locator('.fighter-card').count()==8
+    assert page.locator('#difficulty option').all_text_contents()==['Fácil','Médio','Difícil','Experiente']
+    page.select_option('#difficulty','expert')
+    page.reload(wait_until='domcontentloaded')
+    page.wait_for_function('document.getElementById("loading").hidden')
+    assert page.locator('#difficulty').input_value()=='expert'
+    page.keyboard.press('Enter')
     assert page.locator('#fight-button').is_disabled()
     for i in [0,1,2]:page.locator('.fighter-card').nth(i).click()
     assert page.locator('#fight-button').is_enabled()
@@ -55,6 +61,11 @@ with sync_playwright() as p:
     ready(match)
     match.click('#start-button')
     for i in [0,1,2]:match.locator('.fighter-card').nth(i).click()
+    match.select_option('#difficulty','expert')
+    match.click('#fight-button')
+    cpu_hit=match.evaluate('''() => {let lowest=100;for(let i=0;i<2400;i++){window.__matchCheck.tick();const s=window.__matchCheck.state();lowest=Math.min(lowest,s.players[0].hp);if(lowest<100)break;}return lowest;}''')
+    assert cpu_hit<100,('expert CPU did not reach the opponent',cpu_hit)
+    match.click('#back-button')
     match.click('#mode-button')
     match.click('#fight-button')
     result=match.evaluate('''() => {
