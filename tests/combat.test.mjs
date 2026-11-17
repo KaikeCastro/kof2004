@@ -235,3 +235,48 @@ test('every fighter can MAX-cancel a confirmed first power into the second, incl
     assert.equal(a.cancelled,true);assert.equal(a.energy,energy-25);
   }
 });
+
+test('CPU reacts to threats, approaches or attacks without pressing every attack at once',async()=>{
+  const {decideAI}=await import('../src/ai.js');
+  const cpu=createCombatant(1,500,-1), rival=createCombatant(0,400,1);
+  rival.action='sweep';rival.actionTime=.2;rival.stance='crouch';
+  const defense=decideAI(cpu,rival,[],'hard',()=>.3);
+  assert.equal(defense.block,true);assert.equal(defense.down,true);assert.equal(defense.punch,undefined);
+  rival.action='idle';rival.actionTime=0;rival.x=100;
+  assert.equal(decideAI(cpu,rival,[],'normal',()=>.6).left,true);
+  rival.x=320;assert.equal(decideAI(cpu,rival,[],'normal',()=>.6).left,true);
+  rival.x=400;
+  const attacks=decideAI(cpu,rival,[],'normal',()=>.95);
+  assert.equal(Object.values(attacks).filter(Boolean).length,1);
+});
+test('lenient directional inputs work for both sides without keeping stale commands',()=>{
+  for(const facing of [-1,1]){
+    const f=createCombatant(0,300,facing);
+    recordInput(f,{down:true},.1);
+    recordInput(f,facing===1?{right:true}:{left:true},.3);
+    assert.equal(commandFor(f,{punch:true}),'special');
+    recordInput(f,{},.8);
+    assert.equal(commandFor(f,{punch:true}),null);
+  }
+});
+
+test('vertical super input buffers through landing and spends the required meter',()=>{
+  const f=createCombatant(0,300,1);f.energy=100;
+  stepCombatant(f,{jump:true,jumpHeld:true},STEP);stepCombatant(f,{down:true},STEP);
+  stepCombatant(f,{jump:true,jumpHeld:true},STEP);stepCombatant(f,{down:true,punch:true},STEP);
+  assert.equal(f.inputBuffer?.kind,'super');let activated=false;
+  for(let i=0;i<90;i++){stepCombatant(f,{},STEP);if(f.action==='super'){activated=true;break;}}
+  assert.equal(activated,true);assert.equal(f.energy,0);
+});
+
+test('each fighter has an individual choreography that follows attack progress',async()=>{
+  const {choreography,animationPose}=await import('../src/animation.js');
+  assert.equal(choreography.length,8);assert.equal(new Set(choreography.map(p=>p.pattern)).size,8);
+  for(let i=0;i<8;i++){
+    const f=createCombatant(i,300,1);f.energy=100;assert.equal(attack(f,'special'),true);
+    f.actionTime=f.actionDuration*.5;const mid=animationPose(f);
+    assert.equal(mid.pattern,choreography[i].pattern);assert.ok(mid.shift>0);assert.ok(Number.isFinite(mid.rotation));
+    const first=mid.pattern;f.action='special2';assert.notEqual(animationPose(f).pattern,first);
+    f.actionTime=f.actionDuration;assert.ok(Math.abs(animationPose(f).shift)<1e-6);
+  }
+});

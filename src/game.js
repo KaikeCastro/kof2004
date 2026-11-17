@@ -2,6 +2,8 @@ import {loadPixelArt, drawPixelPortrait, pixelPortraitURL, drawPixelFighter, dra
 import { fighters, clamp, createCombatant, attack, resolveHit, resolveProjectile, drawFighter, specialActions, specialFor, createTeam, advanceTeam, teamDefeated } from './fighters.js';
 
 import {stepCombatant,STEP} from './combat.js';
+import {drawPowerEffect} from './animation.js';
+import {decideAI} from './ai.js';
 
 const $=id=>document.getElementById(id);
 const canvas=$('game'), ctx=canvas.getContext('2d');
@@ -90,6 +92,7 @@ function updateHUD(){
 function finishRound(){
   if(roundStage!=='fight')return;roundStage='outro';stageTime=0;keys.clear();pressed.clear();
   players.forEach(f=>{if(f.hp<=0){f.action='down';f.actionTime=.85;}});
+  players.forEach(f=>{if(f.hp<=0){f.action='down';f.actionTime=.85;f.koTime=0;}});
   const [a,b]=players;roundWinner=a.hp===b.hp?-1:a.hp>b.hp?0:1;
   if(roundWinner>=0){players[roundWinner].action='victory';players[roundWinner].actionTime=2.5;}
   announce(remaining<=0?'TIME OVER':roundWinner<0?'DOUBLE K.O.':'K.O.',roundWinner<0?'OS DOIS TIMES AVANÇAM':`${players[roundWinner].data.name.toUpperCase()} VENCE`);updateHUD();sound(110,.5,'sawtooth',.05,-70);
@@ -143,9 +146,15 @@ function playerIntent(i){
   return Object.fromEntries(Object.entries(map).map(([action,key])=>[action,continuousActions.includes(action)?keys.has(key):pressed.has(key)]));
 }
 function cpuIntent(dt){
-  aiTimer-=dt;const f=players[1],p=players[0],dist=Math.abs(f.x-p.x);const hard=difficulty==='hard',easy=difficulty==='easy';
-  if(aiTimer<=0){aiTimer=(hard?.13:easy?.48:.27)+Math.random()*.2;const roll=Math.random();aiIntent={left:dist>100&&f.x>p.x,right:dist>100&&f.x<p.x,down:p.stance==='crouch'&&p.actionTime>0,block:dist<190&&p.actionTime>0&&roll<(hard?.8:easy?.14:.4),jump:Math.random()<(hard?.14:.06),strongPunch:dist<145&&roll>.65,strongKick:dist<185&&roll>.75,max:hard&&f.energy>=75&&f.maxTime===0&&roll>.8,special2:f.energy>=50&&dist>200&&roll>.5,punch:dist<125&&roll<.65,kick:dist<175&&roll>=.3,grab:dist<90&&roll>.72,dodge:p.actionTime>0&&roll>.8,special:f.energy>=50&&dist<270&&roll>(easy?.7:.35)};}
-  const intent={...aiIntent};aiIntent.jump=false;aiIntent.punch=false;aiIntent.kick=false;aiIntent.special=false;aiIntent.grab=false;aiIntent.dodge=false;aiIntent.strongPunch=false;aiIntent.strongKick=false;aiIntent.special2=false;aiIntent.max=false;return intent;
+  aiTimer-=dt;const f=players[1],p=players[0];
+  if(f.confirmed&&f.energy>=50&&f.cpuCancelAttackId!==f.attackId){
+    const cancel=decideAI(f,p,projectiles,difficulty);
+    if(cancel.special)return cancel;
+  }
+  if(aiTimer<=0){aiTimer=(difficulty==='hard'?.15:difficulty==='easy'?.48:.28)+Math.random()*.12;aiIntent=decideAI(f,p,projectiles,difficulty);}
+  const intent={...aiIntent};
+  for(const action of ['jump','punch','kick','special','grab','dodge','strongPunch','strongKick','special2','max'])aiIntent[action]=false;
+  return intent;
 }
 function updateFighter(f,intent,dt){
   for(const event of stepCombatant(f,intent,dt)){
@@ -155,7 +164,7 @@ function updateFighter(f,intent,dt){
     else if(event.type==='max'){texts.push({text:'MAX MODE',x:f.x,y:260,life:1,max:1,color:'#ff9bff',size:28});sound(330,.35,'sawtooth',.035,400);}
     else if(event.type==='attack'){
       if(specialActions.includes(event.kind)){
-        texts.push({text:specialFor(f,event.kind).name.toUpperCase(),x:f.x,y:270,life:1,max:1,color:f.data.effect,size:22});
+        texts.push({text:(event.kind==='super'?'SUPER · ':'')+specialFor(f,event.kind).name.toUpperCase(),x:f.x,y:270,life:1,max:1,color:f.data.effect,size:22});
         sound(160+f.index*25,.3,'sawtooth',.04,600);
       }else sound(event.kind==='dodge'?220:160,.1,'triangle',.025,-60);
       if(event.cancelled)texts.push({text:f.maxTime>0?'MAX CANCEL':'CANCEL',x:f.x,y:310,life:.6,max:.6,color:'#fffba0',size:18});
@@ -164,8 +173,10 @@ function updateFighter(f,intent,dt){
 }
 function spawnDust(x,y,n){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*150,vy:-Math.random()*100,life:.35,max:.35,color:'#c5b98e',size:3+Math.random()*6});}
 function impact(hit,a,b){
-  for(let i=0;i<(hit.blocked?10:hit.kind==='special'?32:18);i++){const angle=Math.random()*Math.PI*2,speed=70+Math.random()*250;particles.push({x:hit.x,y:hit.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,life:.18+Math.random()*.22,max:.4,color:hit.blocked?'#b4f0ff':i%3===0?'#fff9de':a.data.effect,size:2+Math.random()*5});}
-  shake=hit.blocked?3:hit.kind==='special'?13:6;hitstop=hit.blocked?.025:.055;
+  const heavy=specialActions.includes(hit.kind)||hit.kind==='strongKick'||hit.kind==='strongPunch';
+  for(let i=0;i<(hit.blocked?10:heavy?32:18);i++){const angle=Math.random()*Math.PI*2,speed=70+Math.random()*250;particles.push({x:hit.x,y:hit.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,life:.18+Math.random()*.22,max:.4,color:hit.blocked?'#b4f0ff':i%3===0?'#fff9de':a.data.effect,size:2+Math.random()*5});}
+  shake=hit.blocked?3:heavy?13:6;hitstop=hit.blocked?.025:heavy?.075:.055;
+  if(!hit.blocked)particles.push({x:hit.x,y:hit.y,vx:0,vy:0,life:.1,max:.1,color:'#fff9d5',size:heavy?28:18});
   sound(hit.blocked?360:90,hit.blocked?.08:.12,hit.blocked?'triangle':'sawtooth',.07,-40);
   if(hit.guardBreak)texts.push({text:'GUARD CRUSH',x:b.x,y:310,life:1,max:1,color:'#ff8080',size:22});
   else if(hit.armored)texts.push({text:'ARMOR',x:b.x,y:310,life:.6,max:.6,color:'#ffdd70',size:19});
@@ -186,7 +197,7 @@ function update(dt){
     for(const projectile of projectiles){projectile.x+=projectile.facing*(projectile.speed||470)*dt;projectile.life-=dt;const target=players[projectile.owner===players[0]?1:0];const hit=resolveProjectile(projectile,target);if(hit){projectile.life=0;impact(hit,projectile.owner,target);}}
     projectiles=projectiles.filter(p=>p.life>0&&p.x>0&&p.x<1280);
     if(remaining<=0||players.some(f=>f.hp<=0))finishRound();updateHUD();pressed.clear();
-  }else if(roundStage==='outro'&&stageTime>2.5)nextTeamRound();
+  }else if(roundStage==='outro'){players.forEach(f=>{if(f.hp<=0)f.koTime=stageTime;});if(stageTime>2.5)nextTeamRound();}
   for(const p of particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=450*dt;}particles=particles.filter(p=>p.life>0);
   texts.forEach(t=>{t.life-=dt;t.y-=dt*30;});texts=texts.filter(t=>t.life>0);shake=Math.max(0,shake-dt*25);
 }
@@ -243,8 +254,7 @@ function render(){
   // Ground contact shadows.
   players.forEach(f=>{ctx.fillStyle='#142a2490';ctx.beginPath();ctx.ellipse(f.x,553,70*(1+f.y/1000),12,0,0,Math.PI*2);ctx.fill();});
   const ordered=[...players].sort((a,b)=>a.y-b.y);for(const f of ordered){
-    // A special trails a bright curved energy wave that clearly matches its reach.
-    if(specialActions.includes(f.action)&&f.actionTime>.14){ctx.save();ctx.translate(f.x,550+f.y);ctx.scale(f.facing,1);const spec=specialFor(f),duration=spec.duration,p=(duration-f.actionTime)/duration;ctx.globalAlpha=Math.sin(p*Math.PI)*.75;ctx.strokeStyle=f.data.effect;ctx.lineWidth=18;ctx.shadowColor=f.data.effect;ctx.shadowBlur=25;ctx.beginPath();if(spec.type==='rising'){ctx.ellipse(90+p*90,-130,55+p*25,70,-.2,-1.5,1.4);}else if(['spin','hat','armor'].includes(spec.type)){ctx.arc(110+p*60,-135,45+p*35,0,Math.PI*2);ctx.moveTo(110+p*60,-190);ctx.lineTo(110+p*60,-80);}else{ctx.moveTo(45,-80);ctx.lineTo(95,-190);ctx.lineTo(112,-120);ctx.lineTo(165,-190);ctx.lineTo(140,-80);}ctx.stroke();ctx.lineWidth=4;ctx.strokeStyle='#fff8cd';ctx.stroke();ctx.restore();}
+    drawPowerEffect(ctx,f,time);
     ctx.save();ctx.translate(0,550);if(!drawPixelFighter(ctx,f,time))drawFighter(ctx,f,{time});ctx.restore();
     if(f.maxTime>0){ctx.save();ctx.strokeStyle='#f584ff';ctx.lineWidth=3;ctx.globalAlpha=.5+Math.sin(time*15)*.15;ctx.beginPath();ctx.ellipse(f.x,550+f.y-120,90,135,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
     if(f.blocking){ctx.save();ctx.strokeStyle='#b3e9de90';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(f.x+f.facing*37,550+f.y-(f.guardLow?75:136),27,f.guardLow?42:63,0,-Math.PI/2,Math.PI/2);ctx.stroke();ctx.restore();}

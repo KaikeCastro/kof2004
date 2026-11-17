@@ -32,7 +32,7 @@ const secondSpecials = [
 ];
 export const specialStyles = firstSpecials;
 export const normalActions = ['punch','kick','strongPunch','strongKick','uppercut','sweep'];
-export const specialActions = ['special','special2'];
+export const specialActions = ['special','special2','super'];
 export const actionButtons = [...normalActions,...specialActions,'cast','grab','dodge','max'];
 export const normalStyles = {
   punch:{duration:.28,startup:.06,recovery:.08,reach:122,damage:5,knock:13,height:150,stun:.25,rank:1},
@@ -94,7 +94,7 @@ export function attack(f,kind) {
   if((['grab','dodge','guardCounter','uppercut','sweep'].includes(kind)||(special&&!(specialCancel&&f.maxTime>0)))&&f.y!==0)return false;
   if(kind==='dodge'&&f.dodgeCooldown>0&&!guardCancel)return false;
   if(kind==='guardCounter'&&!guardCancel)return false;
-  const cost=guardCancel?50:special?(f.maxTime>0?25:50):0;
+  const cost=guardCancel?50:kind==='super'?(f.maxTime>0?50:100):special?(f.maxTime>0?25:50):0;
   if(f.energy<cost)return false;
   f.energy-=cost;f.cancelled=cancel;f.confirmed=false;f.hitConnected=false;f.stun=0;f.blockStun=0;f.blocking=false;
   f.stance=kind==='uppercut'?'stand':f.y<0?'air':f.crouching?'crouch':'stand';
@@ -122,7 +122,7 @@ export function attackInfo(f) {
   if(specialActions.includes(f.action)){
     const spec=specialFor(f);
     if(['projectile','groundWave'].includes(spec.type)||t<=.16||t>=spec.duration-.14)return null;
-    return {...spec,damage:spec.damage*(f.powered?1.12:1),knock:85,height:spec.level==='low'?60:135,level:spec.level||'mid',throw:spec.type==='throw',down:!f.powered,stun:.4};
+    return {...spec,damage:spec.damage*(f.action==='super'?1.5:f.powered?1.12:1),knock:85,height:spec.level==='low'?60:135,level:spec.level||'mid',throw:spec.type==='throw',down:!f.powered,stun:.4};
   }
   return null;
 }
@@ -144,7 +144,7 @@ function takeHit(a,b,hit,kind,direction,canConfirm=true){
     if(armored){b.armor--;b.vx*=.15;}
     else{
       b.knockedDown=!!hit.down;b.stun=b.knockedDown?.85:(hit.stun||.25);b.blockStun=0;b.blocking=false;
-      b.action=b.knockedDown?'down':'hurt';b.actionTime=b.stun;b.pendingShots=[];
+      b.action=b.knockedDown?'down':'hurt';b.actionTime=b.stun;b.reactionDuration=b.stun;b.pendingShots=[];
     }
     if(a){if(canConfirm){a.confirmed=true;a.hitConnected=true;}a.combo++;a.comboTimer=.7;}
   }

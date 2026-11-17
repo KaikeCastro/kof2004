@@ -5,8 +5,8 @@ export const STEP=1/60;
 export function recordInput(f,intent,dt){
   f.inputTime+=dt;
   const horizontal=Number(!!intent.right)-Number(!!intent.left),relative=horizontal*f.facing;
-  const direction=intent.down?(relative>0?3:relative<0?1:2):relative>0?6:relative<0?4:5;
-  f.motion=f.motion.filter(entry=>f.inputTime-entry.time<.55);
+  const direction=intent.down?(relative>0?3:relative<0?1:2):(intent.jump||intent.jumpHeld)?8:relative>0?6:relative<0?4:5;
+  f.motion=f.motion.filter(entry=>f.inputTime-entry.time<1.2);
   const changed=direction!==f.lastDirection;
   let dash=null;
   if(changed){
@@ -18,14 +18,15 @@ export function recordInput(f,intent,dt){
   return {horizontal,relative,direction,dash};
 }
 export function hasMotion(f,sequence){
-  const recent=f.motion.filter(entry=>entry.direction!==5&&f.inputTime-entry.time<.5).map(entry=>entry.direction);
+  const recent=f.motion.filter(entry=>entry.direction!==5&&f.inputTime-entry.time<(sequence.length>3?1.2:.65)).map(entry=>entry.direction);
   return recent.slice(-sequence.length).join(',')===sequence.join(',');
 }
 export function commandFor(f,intent){
   const punch=intent.punch||intent.strongPunch,kick=intent.kick||intent.strongKick;
-  if((punch||kick)&&hasMotion(f,[2,1,4]))return 'special2';
+  if((punch||kick)&&(hasMotion(f,[2,3,6,2,3,6])||hasMotion(f,[8,2,8,2])))return 'super';
+  if((punch||kick)&&(hasMotion(f,[2,1,4])||hasMotion(f,[2,4])))return 'special2';
   if(punch&&hasMotion(f,[6,2,3]))return 'uppercut';
-  if((punch||kick)&&hasMotion(f,[2,3,6]))return 'special';
+  if((punch||kick)&&(hasMotion(f,[2,3,6])||hasMotion(f,[2,6])))return 'special';
   return null;
 }
 function startBackdash(f){
@@ -48,7 +49,7 @@ export function stepCombatant(f,intent,dt=STEP){
   f.guardLow=f.crouching;
   f.blocking=f.y===0&&!f.knockedDown&&wantsGuard&&(f.action==='idle'||f.blockStun>0);
   // Holding a defense shortcut never prevents a requested attack when not in blockstun.
-  if(f.blockStun===0&&['punch','kick','strongPunch','strongKick','special','special2','uppercut','sweep','grab','cast'].some(k=>intent[k]))f.blocking=false;
+  if(f.blockStun===0&&['punch','kick','strongPunch','strongKick','special','special2','super','uppercut','sweep','grab','cast'].some(k=>intent[k]))f.blocking=false;
   if(f.hp>0){
     if(f.blockStun>0){
       const counter=intent.strongKick?'guardCounter':intent.dodge?'dodge':null;
@@ -59,7 +60,7 @@ export function stepCombatant(f,intent,dt=STEP){
       if(intent.max&&activateMax(f))events.push({type:'max'});
       const motion=commandFor(f,intent);
       const newRequest=motion||(['special2','special','dodge','grab','uppercut','sweep','strongKick','strongPunch','kick','punch','cast'].find(k=>intent[k]));
-      if(newRequest)f.inputBuffer={kind:newRequest,until:f.inputTime+.12,motion:!!motion};
+      if(newRequest)f.inputBuffer={kind:newRequest,until:f.inputTime+(newRequest==='super'&&f.y<0?1:.16),motion:!!motion};
       if(f.inputBuffer?.until<f.inputTime)f.inputBuffer=null;
       const requested=f.inputBuffer?.kind;
       if(requested&&attack(f,requested)){

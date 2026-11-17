@@ -17,3 +17,18 @@
 .touch-attacks{grid-template-columns:repeat(3,48px);gap:6px;width:156px;min-width:156px;max-width:none}.touch-attacks button{width:48px;height:44px;padding:2px;font-size:6px;overflow:hidden}.touch-dpad{max-width:none}
 @media(max-width:760px){.touch-dpad{grid-template-columns:repeat(3,32px);width:104px}.touch-attacks button{width:48px;height:44px;font-size:6px;padding:2px}.touch-controls{flex-wrap:nowrap}}
 @media(min-width:761px){.roster .fighter-card{aspect-ratio:1}}
+/* Arcade-style selection, mirrored health and power gauges. */
+.selection-screen{background:linear-gradient(125deg,#063299,#0050df 45%,#061d80)}
+.selection-layout{grid-template-columns:44% 56%}.roster{grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}.roster .fighter-card{aspect-ratio:1}.fighter-card{border-color:#e9edff}.fighter-card:after{background:none}.card-copy,.card-number{display:none}
+.health-track{height:13px;padding:1px;border:2px solid #f7f6e3;background:#761f20;box-shadow:0 2px #1c2638}.health-track i{background:linear-gradient(#e1ffd0 0 35%,#79d96e 36% 70%,#398a4e 71%)}.timer{border-color:#f6f6e3;background:linear-gradient(#eeeee0 0 10px,#0d1630 10px)}.hud .power-track i{background:linear-gradient(#fff58a,#f2c634 55%,#d49b25)}
+@media(max-width:760px){.selection-layout{grid-template-columns:42% 58%}.roster{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.health-track{height:9px;border-width:1px;padding:1px}.timer{background:linear-gradient(#eeeee0 0 7px,#0d1630 7px)}}
+@media(max-width:760px){
+  .section-top .eyebrow,.section-top:after{font-size:7px;letter-spacing:0}
+  .panel-heading h3,.count,.select-clock span,.team-picks>div>span{font-size:6px}
+  #team-status,.move-guide>span,#move-list span,.move-guide>small{font-size:6px;line-height:1.8}
+  #move-list b{font-size:6px;line-height:1.7}
+  .match-settings label{font-size:6px}.match-settings select,.mode-button{font-size:6px}
+  .selection-hint,.selection-hint b{font-size:5px;line-height:2}
+  .battle-controls>div{font-size:6px;line-height:2}
+  .touch-controls button{min-height:44px}
+}

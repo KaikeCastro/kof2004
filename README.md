@@ -32,7 +32,7 @@ Na tela inicial, pressione **Enter** ou toque para começar. Selecione três per
 | Agarrão | H | 7 |
 | Esquiva para a frente | E | 8 |
 
-O jogador 2 também pode usar os números e os sinais `−`/`+` do teclado numérico. Os quatro ataques têm versões em pé, agachadas e aéreas, com dano, alcance e recuperação diferentes. O jogo usa passos fixos de simulação de 1/60 s e uma janela de entrada de 0,12 s para encaixar comandos próximos ao fim da recuperação.
+O jogador 2 também pode usar os números e os sinais `−`/`+` do teclado numérico. Os quatro ataques têm versões em pé, agachadas e aéreas, com dano, alcance e recuperação diferentes. O jogo usa passos fixos de simulação de 1/60 s e uma janela de entrada de 0,16 s para encaixar comandos próximos ao fim da recuperação.
 
 ### Movimentação e defesa
 
@@ -58,7 +58,7 @@ Cada técnica custa 50 de energia; a barra armazena 100 (dois estoques). As seta
 | Bruno Santos | Só força: golpe pesado que absorve um impacto sem interromper (ainda recebe dano) | Abalo amazônico: onda pelo chão que exige defesa baixa |
 | Taxad | Golpe do imposto: golpe com avanço | Malha fina: dois projéteis em sequência |
 
-`→ ↓ ↘ + soco` executa o gancho. A sequência direcional deve terminar dentro de aproximadamente 0,5 s. Atalhos antigos de gancho e rasteira continuam disponíveis. A seleção mostra os nomes e os comandos dos dois especiais do lutador destacado.
+`→ ↓ ↘ + soco` executa o gancho. `↓ ↘ → ↓ ↘ → + ataque` ou `↑ ↓ ↑ ↓ + ataque` executa um super por 100 de energia (50 no MAX). A sequência direcional deve terminar dentro de aproximadamente 0,65 s. Atalhos antigos de gancho e rasteira continuam disponíveis. A seleção mostra os nomes e os comandos dos dois especiais do lutador destacado.
 
 ### Combos e MAX
 
@@ -77,6 +77,8 @@ npm run check
 npm test
 ```
 
+Os oito lutadores têm coreografias próprias de antecipação, avanço e recuperação; cada um dos dois especiais usa efeitos visuais diferentes. O jogo inclui folhas próprias de ataque, reação, queda e recuperação para os oito lutadores, combinadas com efeitos desenhados em tempo real. Os quadros ativos dos golpes guiam a exibição da pose de ataque.
+
 O jogo usa Canvas 2D, HTML e CSS. Fontes são locais e têm fallback e o jogo funciona sem serviços externos, contas ou chaves. É um protótipo em pixel art, com sprites e retratos próprios gerados para estes personagens, poses de preparação, caminhada, joelhada, rasteira, salto, soco e chute por lutador e IA simples. Não reproduz integralmente KOF 2002: inclui times de três, mas as regras, os tempos de golpes e as animações são próprios, sem equivalência exata ao KOF 2002. Não inclui multiplayer online. A apresentação usa uma tela inicial arcade, seleção azul com retratos e ordem dos times, barras de vida espelhadas e estoques de energia nos cantos inferiores, inspirados nas referências.
 
 ## Dois jogadores no Wi-Fi local (experimental)
@@ -89,7 +91,7 @@ Um computador deve executar `npm run dev` e os dois aparelhos devem estar na mes
 
 ## Validação no navegador
 
-`npm test` executa 25 testes de combate e times. Para o teste opcional de navegador, tenha Python com Playwright e Chromium instalado, inicie o servidor e execute:
+`npm test` executa testes de combate, times, comandos e CPU. Para o teste opcional de navegador, tenha Python com Playwright e Chromium instalado, inicie o servidor e execute:
 
 ```sh
 GAME_URL=http://127.0.0.1:3000 python tests/browser-smoke.py
